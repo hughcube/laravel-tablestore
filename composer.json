@@ -1,5 +1,5 @@
 {
-    "name": "hughcube/tablestore",
+    "name": "hughcube/laravel-tablestore",
     "description": "A MongoDB based Eloquent model and Query builder for Laravel (Moloquent)",
     "keywords": [
         "laravel",
