@@ -4,6 +4,7 @@ namespace HughCube\TableStore;
 
 use Aliyun\OTS\OTSClient;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Support\Arr;
 
 class Connection extends BaseConnection
 {
@@ -89,7 +90,10 @@ class Connection extends BaseConnection
      */
     protected function createConnection(array $config)
     {
-        new OTSClient($config);
+        $config['ErrorLogHandler'] = Arr::get($config, 'ErrorLogHandler', false);
+        $config['DebugLogHandler'] = Arr::get($config, 'DebugLogHandler', false);
+
+        return new OTSClient($config);
     }
 
     /**
