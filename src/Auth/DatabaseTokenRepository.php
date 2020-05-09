@@ -1,6 +1,6 @@
 <?php
 
-namespace HughCube\TableStore\Auth;
+namespace HughCube\TableStore\;
 
 use DateTime;
 use DateTimeZone;

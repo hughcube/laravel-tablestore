@@ -6,11 +6,11 @@ trait SoftDeletes
 {
     use \Illuminate\Database\Eloquent\SoftDeletes;
 
-    /**
-     * @inheritdoc
-     */
-    public function getQualifiedDeletedAtColumn()
-    {
-        return $this->getDeletedAtColumn();
-    }
+//    /**
+//     * @inheritdoc
+//     */
+//    public function getQualifiedDeletedAtColumn()
+//    {
+//        return $this->getDeletedAtColumn();
+//    }
 }

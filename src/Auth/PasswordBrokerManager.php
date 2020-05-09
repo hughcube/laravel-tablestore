@@ -1,6 +1,6 @@
 <?php
 
-namespace HughCube\TableStore\Auth;
+namespace HughCube\TableStore\;
 
 use Illuminate\Auth\Passwords\PasswordBrokerManager as BasePasswordBrokerManager;
 

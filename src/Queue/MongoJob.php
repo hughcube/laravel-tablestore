@@ -4,7 +4,7 @@ namespace HughCube\TableStore\Queue;
 
 use Illuminate\Queue\Jobs\DatabaseJob;
 
-class Job extends DatabaseJob
+class MongoJob extends DatabaseJob
 {
     /**
      * Indicates if the job has been reserved.

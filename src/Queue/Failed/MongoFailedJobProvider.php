@@ -5,7 +5,7 @@ namespace HughCube\TableStore\Queue\Failed;
 use Carbon\Carbon;
 use Illuminate\Queue\Failed\DatabaseFailedJobProvider;
 
-class FailedJobProvider extends DatabaseFailedJobProvider
+class MongoFailedJobProvider extends DatabaseFailedJobProvider
 {
     /**
      * Log a failed job into storage.

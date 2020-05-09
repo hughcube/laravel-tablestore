@@ -6,7 +6,7 @@ use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Queue\Connectors\ConnectorInterface;
 use Illuminate\Support\Arr;
 
-class Connector implements ConnectorInterface
+class MongoConnector implements ConnectorInterface
 {
     /**
      * Database connections.
@@ -30,7 +30,7 @@ class Connector implements ConnectorInterface
      */
     public function connect(array $config)
     {
-        return new Queue(
+        return new MongoQueue(
             $this->connections->connection(Arr::get($config, 'connection')),
             $config['table'],
             $config['queue'],

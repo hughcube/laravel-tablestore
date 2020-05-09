@@ -2,10 +2,9 @@
 
 namespace HughCube\TableStore;
 
-use HughCube\TableStore\Eloquent\Model;
-use HughCube\TableStore\Queue\Connector;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
-use Laravel\Lumen\Application as LumenApplication;
+use HughCube\TableStore\Eloquent\Model;
+use HughCube\TableStore\Queue\MongoConnector;
 
 class ServiceProvider extends BaseServiceProvider
 {
@@ -14,13 +13,9 @@ class ServiceProvider extends BaseServiceProvider
      */
     public function boot()
     {
-//        if ($this->app instanceof LumenApplication) {
-//            $this->app->configure('database');
-//        }
+        Model::setConnectionResolver($this->app['db']);
 
-        #Model::setConnectionResolver($this->app['db']);
-
-        #Model::setEventDispatcher($this->app['events']);
+        Model::setEventDispatcher($this->app['events']);
     }
 
     /**
@@ -37,10 +32,10 @@ class ServiceProvider extends BaseServiceProvider
         });
 
         // Add connector for queue support.
-        //$this->app->resolving('queue', function ($queue) {
-        //    $queue->addConnector('tableStore', function () {
-        //        return new Connector($this->app['db']);
-        //    });
-        //});
+        $this->app->resolving('queue', function ($queue) {
+            $queue->addConnector('tableStore', function () {
+                return new MongoConnector($this->app['db']);
+            });
+        });
     }
 }

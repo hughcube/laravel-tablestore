@@ -33,29 +33,6 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Begin a fluent query against a database collection.
-     * @param string $collection
-     * @return Query\Builder
-     */
-    public function collection($collection)
-    {
-        $query = new Query\Builder($this, $this->getPostProcessor());
-
-        return $query->from($collection);
-    }
-
-    /**
-     * Begin a fluent query against a database collection.
-     * @param string $table
-     * @param string|null $as
-     * @return Query\Builder
-     */
-    public function table($table, $as = null)
-    {
-        return $this->collection($table);
-    }
-
-    /**
      * @inheritdoc
      */
     public function getSchemaBuilder()
@@ -77,15 +54,12 @@ class Connection extends BaseConnection
      */
     public function getDatabaseName()
     {
-        return null;
+        return $this->getOTSClient()->getClientConfig()->getInstanceName();
     }
 
     /**
-     * Create a new OTS connection.
-     * @see https://help.aliyun.com/document_detail/31757.html?spm=a2c4g.11186623.6.1009.621e258cvwNeUM
-     *
+     * Create a new OTSClient connection.
      * @param array $config
-     *
      * @return OTSClient
      */
     protected function createConnection(array $config)
@@ -102,14 +76,6 @@ class Connection extends BaseConnection
     public function disconnect()
     {
         unset($this->connection);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getElapsedTime($start)
-    {
-        return parent::getElapsedTime($start);
     }
 
     /**
@@ -152,6 +118,17 @@ class Connection extends BaseConnection
      */
     public function __call($method, $parameters)
     {
-        return call_user_func_array([$this->connection, $method], $parameters);
+//        echo "<pre>";
+//        var_dump(array_map(function ($item){
+//            return [
+//                'file' => isset($item['file']) ? $item['file'] : null,
+//                'line' => isset($item['line']) ? $item['line'] : null,
+//                'function' => isset($item['function']) ? $item['function'] : null,
+//            ];
+//        }, debug_backtrace()));
+//        echo "</pre>";
+//        die;
+
+        return call_user_func_array([$this->getOTSClient(), $method], $parameters);
     }
 }

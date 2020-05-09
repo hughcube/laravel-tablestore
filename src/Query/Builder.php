@@ -4,10 +4,14 @@ namespace HughCube\TableStore\Query;
 
 use Closure;
 use DateTime;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Query\Grammars\Grammar;
+use Illuminate\Database\Query\Processors\Processor;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Str;
 use HughCube\TableStore\Connection;
 use MongoCollection;
@@ -15,45 +19,14 @@ use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\Regex;
 use MongoDB\BSON\UTCDateTime;
+use RuntimeException;
 
+/**
+ * Class Builder
+ * @package Jenssegers\Mongodb\Query
+ */
 class Builder extends BaseBuilder
 {
-    /**
-     * The database collection.
-     * @var MongoCollection
-     */
-    protected $collection;
-
-    /**
-     * The column projections.
-     * @var array
-     */
-    public $projections;
-
-    /**
-     * The cursor timeout value.
-     * @var int
-     */
-    public $timeout;
-
-    /**
-     * The cursor hint value.
-     * @var int
-     */
-    public $hint;
-
-    /**
-     * Custom options to add to the query.
-     * @var array
-     */
-    public $options = [];
-
-    /**
-     * Indicate if we are executing a pagination query.
-     * @var bool
-     */
-    public $paginating = false;
-
     /**
      * All of the available clause operators.
      * @var array
@@ -115,79 +88,97 @@ class Builder extends BaseBuilder
         '>=' => '$gte',
     ];
 
-    /**
-     * Check if we need to return Collections instead of plain arrays (laravel >= 5.3 )
-     * @var boolean
-     */
-    protected $useCollections;
+//    /**
+//     * Check if we need to return Collections instead of plain arrays (laravel >= 5.3 )
+//     * @var boolean
+//     */
+//    protected $useCollections;
 
-    /**
-     * @inheritdoc
-     */
-    public function __construct(Connection $connection, Processor $processor)
-    {
-        $this->grammar = new Grammar;
-        $this->connection = $connection;
-        $this->processor = $processor;
-        $this->useCollections = $this->shouldUseCollections();
-    }
+//    /**
+//     * @inheritdoc
+//     */
+//    public function __construct(Connection $connection, Processor $processor)
+//    {
+//        $this->grammar = new Grammar;
+//        $this->connection = $connection;
+//        $this->processor = $processor;
+//    }
+//
+//    /**
+//     * Create a new query builder instance.
+//     *
+//     * @param  \Illuminate\Database\ConnectionInterface  $connection
+//     * @param  \Illuminate\Database\Query\Grammars\Grammar|null  $grammar
+//     * @param  \Illuminate\Database\Query\Processors\Processor|null  $processor
+//     * @return void
+//     */
+//    public function __construct(ConnectionInterface $connection,
+//                                Grammar $grammar = null,
+//                                Processor $processor = null)
+//    {
+//        $this->connection = $connection;
+//        $this->grammar = $grammar ?: $connection->getQueryGrammar();
+//        $this->processor = $processor ?: $connection->getPostProcessor();
+//    }
 
-    /**
-     * Returns true if Laravel or Lumen >= 5.3
-     * @return bool
-     */
-    protected function shouldUseCollections()
-    {
-        if (function_exists('app')) {
-            $version = app()->version();
-            $version = filter_var(explode(')', $version)[0], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION); // lumen
-            return version_compare($version, '5.3', '>=');
-        }
+//    /**
+//     * Returns true if Laravel or Lumen >= 5.3
+//     * @return bool
+//     */
+//    protected function shouldUseCollections()
+//    {
+//        if (function_exists('app')) {
+//            $version = app()->version();
+//            $version = filter_var(explode(')', $version)[0], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION); // lumen
+//            return version_compare($version, '5.3', '>=');
+//        }
+//
+//        return true;
+//    }
 
-        return true;
-    }
-
-    /**
-     * Set the projections.
-     * @param array $columns
-     * @return $this
-     */
-    public function project($columns)
-    {
-        $this->projections = is_array($columns) ? $columns : func_get_args();
-
-        return $this;
-    }
-
-    /**
-     * Set the cursor timeout in seconds.
-     * @param int $seconds
-     * @return $this
-     */
-    public function timeout($seconds)
-    {
-        $this->timeout = $seconds;
-
-        return $this;
-    }
-
-    /**
-     * Set the cursor hint.
-     * @param mixed $index
-     * @return $this
-     */
-    public function hint($index)
-    {
-        $this->hint = $index;
-
-        return $this;
-    }
+//    /**
+//     * Set the projections.
+//     * @param array $columns
+//     * @return $this
+//     */
+//    public function project($columns)
+//    {
+//        $this->projections = is_array($columns) ? $columns : func_get_args();
+//
+//        return $this;
+//    }
+//
+//    /**
+//     * Set the cursor timeout in seconds.
+//     * @param int $seconds
+//     * @return $this
+//     */
+//    public function timeout($seconds)
+//    {
+//        $this->timeout = $seconds;
+//
+//        return $this;
+//    }
+//
+//    /**
+//     * Set the cursor hint.
+//     * @param mixed $index
+//     * @return $this
+//     */
+//    public function hint($index)
+//    {
+//        $this->hint = $index;
+//
+//        return $this;
+//    }
 
     /**
      * @inheritdoc
      */
     public function find($id, $columns = [])
     {
+        #$id = is_array($id) ? $id : ['id' => $id]
+
         return $this->where('_id', '=', $this->convertKey($id))->first($columns);
     }
 
@@ -210,11 +201,24 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * @inheritdoc
+     */
+    public function cursor($columns = [])
+    {
+        $result =  $this->getFresh($columns, true);
+        if ($result instanceof LazyCollection) {
+            return $result;
+        }
+        throw new RuntimeException("Query not compatible with cursor");
+    }
+
+    /**
      * Execute the query as a fresh "select" statement.
      * @param array $columns
-     * @return array|static[]|Collection
+     * @param bool $returnLazy
+     * @return array|static[]|Collection|LazyCollection
      */
-    public function getFresh($columns = [])
+    public function getFresh($columns = [], $returnLazy = false)
     {
         // If no columns have been specified for the select statement, we will set them
         // here to either the passed columns, or the standard default of retrieving
@@ -401,6 +405,14 @@ class Builder extends BaseBuilder
 
             // Execute query and get MongoCursor
             $cursor = $this->collection->find($wheres, $options);
+
+            if ($returnLazy) {
+                return LazyCollection::make(function () use ($cursor) {
+                    foreach ($cursor as $item) {
+                        yield $item;
+                    }
+                });
+            }
 
             // Return results as an array with numeric keys
             $results = iterator_to_array($cursor, false);
@@ -683,17 +695,17 @@ class Builder extends BaseBuilder
         return 0;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function from($collection, $as = null)
-    {
-        if ($collection) {
-            $this->collection = $this->connection->getCollection($collection);
-        }
-
-        return parent::from($collection);
-    }
+//    /**
+//     * @inheritdoc
+//     */
+//    public function from($collection, $as = null)
+//    {
+//        if ($collection) {
+//            $this->collection = $this->connection->getCollection($collection);
+//        }
+//
+//        return parent::from($collection);
+//    }
 
     /**
      * @inheritdoc
@@ -993,6 +1005,7 @@ class Builder extends BaseBuilder
     protected function compileWhereBasic(array $where)
     {
         extract($where);
+        $is_numeric = false;
 
         // Replace like or not like with a Regex instance.
         if (in_array($operator, ['like', 'not like'])) {
@@ -1004,15 +1017,21 @@ class Builder extends BaseBuilder
 
             // Convert to regular expression.
             $regex = preg_replace('#(^|[^\\\])%#', '$1.*', preg_quote($value));
+            $plain_value = $value;
 
             // Convert like to regular expression.
             if (!Str::startsWith($value, '%')) {
                 $regex = '^' . $regex;
+            } else {
+                $plain_value = Str::replaceFirst('%', null, $plain_value);
             }
             if (!Str::endsWith($value, '%')) {
                 $regex .= '$';
+            } else {
+                $plain_value = Str::replaceLast('%', null, $plain_value);
             }
 
+            $is_numeric = is_numeric($plain_value);
             $value = new Regex($regex, 'i');
         } // Manipulate regexp operations.
         elseif (in_array($operator, ['regexp', 'not regexp', 'regex', 'not regex'])) {
@@ -1032,7 +1051,11 @@ class Builder extends BaseBuilder
         }
 
         if (!isset($operator) || $operator == '=') {
-            $query = [$column => $value];
+            if ($is_numeric) {
+                $query = ['$where' => '/^'.$value->getPattern().'/.test(this.'.$column.')'];
+            } else {
+                $query = [$column => $value];
+            }
         } elseif (array_key_exists($operator, $this->conversion)) {
             $query = [$column => [$this->conversion[$operator] => $value]];
         } else {

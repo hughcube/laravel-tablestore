@@ -7,7 +7,7 @@ use Illuminate\Queue\DatabaseQueue;
 use HughCube\TableStore\Connection;
 use MongoDB\Operation\FindOneAndUpdate;
 
-class Queue extends DatabaseQueue
+class MongoQueue extends DatabaseQueue
 {
     /**
      * The expiration time of a job.
@@ -42,7 +42,7 @@ class Queue extends DatabaseQueue
         }
 
         if ($job = $this->getNextAvailableJobAndReserve($queue)) {
-            return new Job(
+            return new MongoJob(
                 $this->container, $this, $job, $this->connectionName, $queue
             );
         }
